@@ -12,6 +12,7 @@ const PlaceListComponent = ({ lat, lng }) => {
                     withCredentials: true
                 });
 
+                setGyms(geoResponse.data.items || []);
             } catch (error) {
                 console.error("API 호출 오류:", error);
             }
