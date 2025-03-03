@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from "react";
-import PlaceListComponent from "./PlaceListComponent";
-//  김누리
+import PlaceListComponent from "./PlaceListComponent"; // 📌 헬스장 목록 컴포넌트
+
 const MapComponent = () => {
     const [map, setMap] = useState(null);
     const [userLat, setUserLat] = useState(null);
     const [userLng, setUserLng] = useState(null);
 
     useEffect(() => {
-        let map = null;
-
         const initMap = (lat, lng) => {
             const { naver } = window;
             if (!naver) return;
@@ -29,7 +27,7 @@ const MapComponent = () => {
                 }
             });
 
-            setMap(mapInstance);
+            setMap(mapInstance); // ✅ `map` 상태 업데이트
             setUserLat(lat);
             setUserLng(lng);
         };
@@ -44,7 +42,7 @@ const MapComponent = () => {
                     },
                     (error) => {
                         console.error("Geolocation Error: ", error);
-                        initMap(37.5665, 126.9780);
+                        initMap(37.5665, 126.9780); // 기본값: 서울 시청
                     }, {
                         enableHighAccuracy: true,
                         timeout: 10000,
@@ -67,7 +65,9 @@ const MapComponent = () => {
     return (
         <div>
             <div id="map" style={{ width: '100%', height: '400px' }} />
-            {userLat && userLng && <PlaceListComponent lat={userLat} lng={userLng} />}
+            {map && userLat && userLng && (
+                <PlaceListComponent map={map} lat={userLat} lng={userLng} />
+            )}
         </div>
     );
 };

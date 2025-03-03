@@ -16,6 +16,7 @@ class PlaceController (
         @RequestParam lat: Double,
         @RequestParam lng: Double
     ) : String {
+        println("GET NEAR GYM")
         return placeService.searchGym(lat, lng)
     }
 }
