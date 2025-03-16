@@ -2,6 +2,7 @@ package com.nrkimprogect.backend.domain.map.service.place
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
@@ -40,6 +41,7 @@ class PlaceService (
         val uri = UriComponentsBuilder.fromUriString(reverseGeoUri)
             .queryParam("coords", "$lng,$lat") // 네이버는 "경도,위도" 순서!
             .queryParam("sourcecrs", "EPSG:4326")
+            .queryParam("targetcrs", "EPSG:4326")
             .queryParam("output", "json")
             .queryParam("orders", "legalcode,admcode")
             .build()
@@ -115,10 +117,50 @@ class PlaceService (
         return try {
             val response = restTemplate.exchange(uri, HttpMethod.GET, entity, String::class.java)
             println("✅ 네이버 지역 검색 API 응답: ${response.body}")
-            response.body ?: "{}"
+            // ✅ 응답 데이터를 JSON으로 변환 후 좌표 수정
+            val correctedJson = correctResponseCoordinates(response.body ?: "{}")
+
+            correctedJson
         } catch (e: Exception) {
             println("❌ 네이버 지역 검색 API 요청 실패: ${e.message}")
             "{}"
         }
     }
+
+    fun correctResponseCoordinates(jsonResponse: String): String {
+        return try {
+            val mapper = ObjectMapper()
+            val rootNode: JsonNode = mapper.readTree(jsonResponse)
+
+            val items = rootNode.path("items")
+            if (items.isEmpty) return jsonResponse // 변환할 데이터가 없으면 그대로 반환
+
+            for (item in items) {
+                val originalMapx = item.path("mapx").asText()
+                val originalMapy = item.path("mapy").asText()
+
+                // 좌표 변환 적용
+                val (correctedX, correctedY) = correctCoordinates(originalMapx, originalMapy)
+
+                // JSON 노드 값 업데이트
+                (item as ObjectNode).put("mapx", correctedX)
+                (item as ObjectNode).put("mapy", correctedY)
+
+                println("🔄 변환된 좌표: 원본 ($originalMapx, $originalMapy) → 수정 ($correctedX, $correctedY)")
+            }
+
+            // JSON을 문자열로 변환하여 반환
+            mapper.writeValueAsString(rootNode)
+        } catch (e: Exception) {
+            println("❌ 좌표 변환 중 오류 발생: ${e.message}")
+            jsonResponse // 오류 발생 시 원본 반환
+        }
+    }
+
+    fun correctCoordinates(mapx: String, mapy: String): Pair<Double, Double> {
+        val correctedX = mapx.toDouble() / 10_000_000
+        val correctedY = mapy.toDouble() / 10_000_000
+        return Pair(correctedX, correctedY)
+    }
+
 }
